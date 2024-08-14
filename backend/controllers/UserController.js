@@ -1,3 +1,4 @@
+const createUserToken = require("../helpers/create-user-token");
 const { User } = require("../models/associations/associations");
 const bcrypt = require("bcrypt");
 
@@ -64,10 +65,7 @@ module.exports = class UserController {
     // Gravando user no mysql
     try {
       const newUser = await user.save();
-      res.status(201).json({
-        message: "Usuário criado com sucesso!",
-        newUser,
-      });
+      await createUserToken(newUser, req, res);
     } catch (error) {
       console.error("Erro ao registrar usuário: " + error);
       res.status(500).json({ message: "Erro ao criar usuário!" });
