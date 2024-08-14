@@ -106,10 +106,22 @@ module.exports = class UserController {
       res.status(422).json({
         message: "Senha Inválida!",
       });
-      return
+      return;
     }
 
     // Caso passar em todas as validações basta autenticar o usuário
-    await createUserToken(userExists, req, res)
+    await createUserToken(userExists, req, res);
+  }
+
+  static async profile(req, res) {
+    try {
+      const user = req.user; // O usuário está no req.user devido ao middleware checkUser
+      res.status(200).json({
+        message: "Perfil do usuário recuperado com sucesso!",
+        user,
+      });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao recuperar perfil do usuário." });
+    }
   }
 };
