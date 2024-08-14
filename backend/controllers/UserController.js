@@ -1,4 +1,5 @@
 const { User } = require("../models/associations/associations");
+const bcrypt = require("bcrypt");
 
 module.exports = class UserController {
   static async register(req, res) {
@@ -48,6 +49,28 @@ module.exports = class UserController {
         message: "Por favor utilize outro nome de usuário !",
       });
       return;
+    }
+
+    // Criar uma senha criptografada
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Criando meu obj de user para gravar no banco.
+    const user = new User({
+      username,
+      senha: passwordHash,
+    });
+
+    // Gravando user no mysql
+    try {
+      const newUser = await user.save();
+      res.status(201).json({
+        message: "Usuário criado com sucesso!",
+        newUser,
+      });
+    } catch (error) {
+      console.error("Erro ao registrar usuário: " + error);
+      res.status(500).json({ message: "Erro ao criar usuário!" });
     }
   }
 };
