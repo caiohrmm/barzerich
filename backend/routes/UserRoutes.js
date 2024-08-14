@@ -6,5 +6,6 @@ const checkUser = require("../middlewares/checkUser");
 router.post("/register", UserController.register);
 router.post("/login", UserController.login);
 router.get("/profile", checkUser, UserController.profile);
+router.get("/:id", UserController.getUserById);
 
 module.exports = router;

@@ -124,4 +124,24 @@ module.exports = class UserController {
       res.status(500).json({ message: "Erro ao recuperar perfil do usuário." });
     }
   }
+
+  static async getUserById(req, res) {
+    const id = req.params.id;
+
+    // Buscar o usuário no banco de dados sem a senha
+    const user = await User.findByPk(id, {
+      attributes: { exclude: ["senha"] }, // Exclui o campo 'senha'
+    });
+
+    if (!user) {
+      res.status(422).json({
+        message: "Usuário não encontrado na base de dados!",
+      });
+      return;
+    }
+
+    res.status(200).json({
+      user,
+    });
+  }
 };
