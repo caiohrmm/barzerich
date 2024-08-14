@@ -17,9 +17,12 @@ app.use(express.static("public"));
 // Conexão sequelize
 const connection = require("./database/connection");
 
+// Models
+const associations = require("./models/associations/associations");
+
 const port = 5000;
 // Se conectar ao banco de dados ele sobe a API
 connection
-  .sync()
+  .sync({ force: true })
   .then(() => app.listen(port))
-  .catch((err) => console.log(err));
+  .catch((err) => console.log(`Erro na criação do banco de dados ${err}`));
