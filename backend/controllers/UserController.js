@@ -1,3 +1,4 @@
+const checkUserExists = require("../helpers/check-user-exists");
 const createUserToken = require("../helpers/create-user-token");
 const { User } = require("../models/associations/associations");
 const bcrypt = require("bcrypt");
@@ -38,11 +39,7 @@ module.exports = class UserController {
     }
 
     // Checkar se um usuário existe
-    const userExists = await User.findOne({
-      where: {
-        username,
-      },
-    });
+    const userExists = await checkUserExists(username);
 
     // Se o username já existir ele não deixa criar um username igual.
     if (userExists) {
@@ -70,5 +67,27 @@ module.exports = class UserController {
       console.error("Erro ao registrar usuário: " + error);
       res.status(500).json({ message: "Erro ao criar usuário!" });
     }
+  }
+
+  static async login(req, res) {
+    const { username, password } = req.body;
+
+    // Validações -> Enviar uma resposta de erro ao usuário caso algum campo não tenha chegado
+    if (!username) {
+      res.status(422).json({
+        message: "O nome é obrigatório!",
+      });
+      return;
+    }
+
+    if (!password) {
+      res.status(422).json({
+        message: "A senha é obrigatória!",
+      });
+      return;
+    }
+
+     // Checkar se um usuário existe
+     const userExists = await checkUserExists(username);
   }
 };
