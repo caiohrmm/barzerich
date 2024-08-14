@@ -1,7 +1,6 @@
 // Model para os clientes
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/connection"); // Importa a conexão
-const Order = require("./Order");
 
 const Customer = sequelize.define(
   "Customer",

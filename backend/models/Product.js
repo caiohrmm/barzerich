@@ -1,7 +1,5 @@
 const { DataTypes } = require("sequelize");
 const sequelize = require("../database/connection");
-const Order = require("./Order");
-const OrderProducts = require("./OrderProducts"); // Importar o modelo intermediário
 
 const Product = sequelize.define(
   "Product",
