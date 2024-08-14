@@ -26,6 +26,6 @@ const associations = require("./models/associations/associations");
 const port = 5000;
 // Se conectar ao banco de dados ele sobe a API
 connection
-  .sync({ force: true })
+  .sync()
   .then(() => app.listen(port))
   .catch((err) => console.log(`Erro na criação do banco de dados ${err}`));
