@@ -2,6 +2,52 @@ const { User } = require("../models/associations/associations");
 
 module.exports = class UserController {
   static async register(req, res) {
-    res.json("Olá usuário!");
+    // Trazer os campos do body para o controller
+    const { username, password, confirmPassword } = req.body;
+
+    // Validações -> Enviar uma resposta de erro ao usuário caso algum campo não tenha chegado
+    if (!username) {
+      res.status(422).json({
+        message: "O nome é obrigatório!",
+      });
+      return;
+    }
+
+    if (!password) {
+      res.status(422).json({
+        message: "A senha é obrigatória!",
+      });
+      return;
+    }
+
+    if (!confirmPassword) {
+      res.status(422).json({
+        message: "É necessário confirmar a senha!",
+      });
+      return;
+    }
+
+    // Analisar se a senha passada coincide com a confirmação de senha
+    if (password != confirmPassword) {
+      res.status(422).json({
+        message: "As senhas não coincidem !!!",
+      });
+      return;
+    }
+
+    // Checkar se um usuário existe
+    const userExists = await User.findOne({
+      where: {
+        username,
+      },
+    });
+
+    // Se o username já existir ele não deixa criar um username igual.
+    if (userExists) {
+      res.status(422).json({
+        message: "Por favor utilize outro nome de usuário !",
+      });
+      return;
+    }
   }
 };
