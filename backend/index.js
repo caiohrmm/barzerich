@@ -13,6 +13,9 @@ app.use(cors({ credentials: true, origin: "http://localhost:3000" }));
 app.use(express.static("public"));
 
 // Rotas de acesso
+const UserRoutes = require("./routes/UserRoutes");
+
+app.use("/user", UserRoutes);
 
 // Conexão sequelize
 const connection = require("./database/connection");
