@@ -1,9 +1,17 @@
 const { Sequelize } = require("sequelize");
 
-const sequelize = new Sequelize("barzerich", "root", "caio123", {
-  host: "localhost",
-  dialect: "mysql",
-});
+// Carregar variáveis de ambiente
+require("dotenv").config();
+
+const sequelize = new Sequelize(
+  process.env.MYSQL_SCHEMA,
+  process.env.MYSQL_USER,
+  process.env.MYSQL_PASSWORD,
+  {
+    host: process.env.MYSQL_URL,
+    dialect: "mysql",
+  }
+);
 
 try {
   sequelize.authenticate();
