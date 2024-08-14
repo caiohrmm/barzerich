@@ -14,4 +14,12 @@ app.use(express.static("public"));
 
 // Rotas de acesso
 
-app.listen(5000);
+// Conexão sequelize
+const connection = require("./database/connection");
+
+const port = 5000;
+// Se conectar ao banco de dados ele sobe a API
+connection
+  .sync()
+  .then(() => app.listen(port))
+  .catch((err) => console.log(err));
