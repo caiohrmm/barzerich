@@ -144,4 +144,69 @@ module.exports = class UserController {
       user,
     });
   }
+  static async editUserById(req, res) {
+    // Recuperar o id do usuário pelo token JWT
+    const user = await User.findByPk(req.user.id);
+
+    const { username, oldPassword, confirmNewPassword, newPassword } = req.body;
+
+    // Validações -> Enviar uma resposta de erro ao usuário caso algum campo não tenha chegado
+    if (!username) {
+      res.status(422).json({
+        message: "O nome é obrigatório!",
+      });
+      return;
+    }
+
+    // Validação de senha
+    if (oldPassword || confirmNewPassword || newPassword) {
+      // Se algum dos campos de senha for fornecido, todos devem ser preenchidos
+      if (!oldPassword || !confirmNewPassword || !newPassword) {
+        return res.status(422).json({
+          message: "Para alterar a senha, preencha todos os campos de senha.",
+        });
+      }
+
+      // Verifique se a senha atual é válida
+      const checkPassword = await bcrypt.compare(oldPassword, user.senha);
+      if (!checkPassword) {
+        return res.status(422).json({ message: "Senha atual incorreta!" });
+      }
+
+      // Verifique se a nova senha coincide com a confirmação
+      if (newPassword !== confirmNewPassword) {
+        return res.status(422).json({
+          message: "A nova senha e a confirmação de senha não coincidem!",
+        });
+      }
+
+      // Criar senha criptografada e atualizar
+      const salt = await bcrypt.genSalt(12);
+      const passwordHash = await bcrypt.hash(newPassword, salt);
+      user.senha = passwordHash;
+    }
+
+    // Checkar se um usuário existe
+    const userExists = await checkUserExists(username);
+
+    // Se o username já existir ele não deixa criar um username igual.
+    if (userExists && req.user.username !== username) {
+      res.status(422).json({
+        message: "Por favor utilize outro nome de usuário !",
+      });
+      return;
+    }
+    user.username = username;
+
+    // Salvar as alterações no banco de dados
+    try {
+      await user.save();
+      res
+        .status(200)
+        .json({ message: "Usuário atualizado com sucesso!", user });
+    } catch (error) {
+      res.status(500).json({ message: "Erro ao atualizar o usuário!" });
+      return;
+    }
+  }
 };
