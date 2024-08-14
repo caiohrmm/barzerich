@@ -87,7 +87,29 @@ module.exports = class UserController {
       return;
     }
 
-     // Checkar se um usuário existe
-     const userExists = await checkUserExists(username);
+    // Checkar se um usuário existe
+    const userExists = await checkUserExists(username);
+
+    // Se usuário não existir ele ainda não está cadastrado
+    if (!userExists) {
+      res.status(422).json({
+        message:
+          "Não existe nenhum usuário cadastrado em nosso sistema com esse nome!",
+      });
+      return;
+    }
+
+    // Checkar se a senha que chega no req.body coincide com a senha do usuário no banco de dados
+    const checkPassword = await bcrypt.compare(password, userExists.senha);
+
+    if (!checkPassword) {
+      res.status(422).json({
+        message: "Senha Inválida!",
+      });
+      return
+    }
+
+    // Caso passar em todas as validações basta autenticar o usuário
+    await createUserToken(userExists, req, res)
   }
 };
