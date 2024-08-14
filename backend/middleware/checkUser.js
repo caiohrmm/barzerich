@@ -18,8 +18,10 @@ const checkUser = async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const userId = decoded.id;
 
-    // Buscar o usuário no banco de dados
-    const user = await User.findByPk(userId);
+    // Buscar o usuário no banco de dados sem a senha
+    const user = await User.findByPk(userId, {
+      attributes: { exclude: ["senha"] }, // Exclui o campo 'senha'
+    });
 
     if (!user) {
       return res.status(404).json({ message: "Usuário não encontrado." });
