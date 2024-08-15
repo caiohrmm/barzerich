@@ -12,14 +12,11 @@ module.exports = class CustomerController {
         .json({ message: "O nome do cliente é obrigatório!" });
     }
 
-    // Converter o nome para maiúsculas
-    name = name.toUpperCase();
-
     try {
       // Verificar se o cliente já existe
       const customerExists = await Customer.findOne({
         where: {
-          nome: name,
+          nome: name.toUpperCase(),
         },
       });
 
@@ -28,7 +25,7 @@ module.exports = class CustomerController {
       }
 
       // Criar um novo cliente
-      const newCustomer = await Customer.create({ nome: name });
+      const newCustomer = await Customer.create({ nome: name.toUpperCase() });
 
       // Responder com sucesso
       res.status(201).json({
@@ -38,6 +35,16 @@ module.exports = class CustomerController {
     } catch (error) {
       console.error("Erro ao criar cliente: " + error);
       res.status(500).json({ message: "Erro ao criar cliente!" });
+    }
+  }
+
+  static async getAllCustomers(req, res) {
+    try {
+      const customers = await Customer.findAll();
+      res.status(200).json(customers);
+    } catch (error) {
+      console.error("Erro ao listar clientes: " + error);
+      res.status(500).json({ message: "Erro ao listar clientes!" });
     }
   }
 };
