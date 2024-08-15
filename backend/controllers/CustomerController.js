@@ -1,5 +1,5 @@
 const { Op } = require("sequelize");
-const { Customer } = require("../models/associations/associations");
+const { Customer, Order } = require("../models/associations/associations");
 
 module.exports = class CustomerController {
   static async addCustomer(req, res) {
@@ -111,6 +111,37 @@ module.exports = class CustomerController {
     } catch (error) {
       console.error("Erro ao atualizar cliente: " + error);
       res.status(500).json({ message: "Erro ao atualizar cliente!" });
+    }
+  }
+
+  static async deleteCustomerById(req, res) {
+    const { id } = req.params;
+
+    try {
+      // Verificar se o cliente existe
+      const customer = await Customer.findByPk(id);
+
+      if (!customer) {
+        return res.status(404).json({ message: "Cliente não encontrado!" });
+      }
+
+      // Verificar se o cliente tem pedidos associados
+      const orders = await Order.findAll({ where: { cliente_id: id } });
+
+      if (orders.length > 0) {
+        return res.status(400).json({
+          message:
+            "Não é possível excluir o cliente porque ele tem pedidos associados. Exclua os pedidos do mesmo para concluir esta ação !",
+        });
+      }
+
+      // Excluir o cliente
+      await customer.destroy();
+
+      res.status(200).json({ message: "Cliente excluído com sucesso!" });
+    } catch (error) {
+      console.error("Erro ao excluir cliente: " + error);
+      res.status(500).json({ message: "Erro ao excluir cliente!" });
     }
   }
 };
