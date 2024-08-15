@@ -1,4 +1,4 @@
-const { Category } = require("../models/associations/associations");
+const { Category, Product } = require("../models/associations/associations");
 
 module.exports = class CategoryController {
   static async addCategory(req, res) {
@@ -62,6 +62,16 @@ module.exports = class CategoryController {
       if (!category) {
         return res.status(404).json({ message: "Categoria não encontrada!" });
       }
+
+       // Verificar se o cliente tem pedidos associados
+       const products = await Product.findAll({ where: { categoria_id: id } });
+
+       if (products.length > 0) {
+         return res.status(400).json({
+           message:
+             "Não é possível excluir a categoria porque ela tem produtos associados. Exclua os produtos da mesma para concluir essa ação !",
+         });
+       }
 
       // Excluir a categoria
       await category.destroy();
