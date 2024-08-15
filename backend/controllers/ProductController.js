@@ -39,9 +39,20 @@ module.exports = class ProductController {
         return res.status(404).json({ message: "Categoria não encontrada!" });
       }
 
+      // Verificar se o produto já existe pelo nome
+      const productExists = await Product.findOne({
+        where: {
+          nome: name.toUpperCase(),
+        },
+      });
+
+      if (productExists) {
+        return res.status(422).json({ message: "Produto já cadastrado no sistema!" });
+      }
+
       // Criar novo produto
       const product = await Product.create({
-        nome: name,
+        nome: name.toUpperCase(),
         preco_venda: salePrice,
         preco_custo: costPrice,
         estoque: stock || 0,
