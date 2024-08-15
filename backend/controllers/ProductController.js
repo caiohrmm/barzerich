@@ -40,10 +40,10 @@ module.exports = class ProductController {
 
       // Criar novo produto
       const product = await Product.create({
-        name,
-        sale_price: salePrice,
-        cost_price: costPrice,
-        stock: stock || 0,
+        nome: name,
+        preco_venda: salePrice,
+        preco_custo: costPrice,
+        estoque: stock || 0,
         categoria_id: categoryId,
       });
 
