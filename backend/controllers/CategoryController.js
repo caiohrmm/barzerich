@@ -98,6 +98,18 @@ module.exports = class CategoryController {
         return res.status(404).json({ message: "Categoria não encontrada!" });
       }
 
+      // Verificar se o novo nome que será atualizado não existe em uma categoria!
+      const categoryExists = await Category.findOne({
+        where: {
+          nome: name,
+        },
+      });
+      if (categoryExists) {
+        return res
+          .status(404)
+          .json({ message: "Essa categoria já está cadastrada !" });
+      }
+
       // Atualizar a categoria
       category.nome = name;
       await category.save();
