@@ -84,21 +84,33 @@ module.exports = class CustomerController {
       // Verificar se o cliente existe
       const customer = await Customer.findByPk(id);
       if (!customer) {
-        return res.status(404).json({ message: "Cliente não encontrada!" });
+        return res.status(404).json({ message: "Cliente não encontrado!" });
       }
 
-      // Atualizar a categoria
-      category.nome = name;
-      await category.save();
+      // Verificar se o novo nome que será atualizado não existe em um cliente!
+      const customerExists = await Customer.findOne({
+        where: {
+          nome: name,
+        },
+      });
+      if (customerExists) {
+        return res
+          .status(404)
+          .json({ message: "Esse cliente já está cadastrado !" });
+      }
+
+      // Atualizar o cliente
+      customer.nome = name;
+      await customer.save();
 
       // Responder com sucesso
       res.status(200).json({
-        message: "Categoria atualizada com sucesso!",
-        category,
+        message: "Cliente atualizado com sucesso!",
+        customer,
       });
     } catch (error) {
-      console.error("Erro ao atualizar categoria: " + error);
-      res.status(500).json({ message: "Erro ao atualizar categoria!" });
+      console.error("Erro ao atualizar cliente: " + error);
+      res.status(500).json({ message: "Erro ao atualizar cliente!" });
     }
   }
 };
