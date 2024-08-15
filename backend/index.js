@@ -16,10 +16,12 @@ app.use(express.static("public"));
 const UserRoutes = require("./routes/UserRoutes");
 const ProductRoutes = require("./routes/ProductRoutes");
 const CategoryRoutes = require("./routes/CategoryRoutes");
+const CustomerRoutes = require("./routes/CustomerRoutes");
 
 app.use("/users", UserRoutes);
 app.use("/products", ProductRoutes);
 app.use("/categories", CategoryRoutes);
+app.use("/customers", CustomerRoutes);
 
 // Conexão sequelize
 const connection = require("./database/connection");
