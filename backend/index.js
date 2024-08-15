@@ -14,8 +14,10 @@ app.use(express.static("public"));
 
 // Rotas de acesso
 const UserRoutes = require("./routes/UserRoutes");
+const ProductRoutes = require("./routes/ProductRoutes");
 
 app.use("/users", UserRoutes);
+app.use("/products", ProductRoutes);
 
 // Conexão sequelize
 const connection = require("./database/connection");
