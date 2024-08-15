@@ -21,7 +21,7 @@ module.exports = class CategoryController {
       }
 
       // Criar uma nova categoria
-      const newCategory = await Category.create({ nome: name });
+      const newCategory = await Category.create({ nome: name.toUpperCase() });
 
       // Responder com sucesso
       res.status(201).json({
