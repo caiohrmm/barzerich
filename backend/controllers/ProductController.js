@@ -42,17 +42,19 @@ module.exports = class ProductController {
       // Verificar se o produto já existe pelo nome
       const productExists = await Product.findOne({
         where: {
-          nome: name.toUpperCase(),
+          nome: name,
         },
       });
 
       if (productExists) {
-        return res.status(422).json({ message: "Produto já cadastrado no sistema!" });
+        return res
+          .status(422)
+          .json({ message: "Produto já cadastrado no sistema!" });
       }
 
       // Criar novo produto
       const product = await Product.create({
-        nome: name.toUpperCase(),
+        nome: name,
         preco_venda: salePrice,
         preco_custo: costPrice,
         estoque: stock || 0,
