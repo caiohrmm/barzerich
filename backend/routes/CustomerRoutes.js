@@ -8,8 +8,7 @@ router.get("/", checkUser, CustomerController.getAllCustomers);
 router.get('/:id', checkUser, CustomerController.getCustomerById);
 router.patch('/:id', checkUser, CustomerController.updateCustomerById);
 router.delete('/:id', checkUser, CustomerController.deleteCustomerById);
-/*
 router.get('/findbyname/search', checkUser, CustomerController.searchCustomers);
-*/
+
 
 module.exports = router;

@@ -144,4 +144,35 @@ module.exports = class CustomerController {
       res.status(500).json({ message: "Erro ao excluir cliente!" });
     }
   }
+
+  static async searchCustomers(req, res) {
+    const { name } = req.query;
+
+    if (!name) {
+      return res
+        .status(422)
+        .json({ message: "O nome é obrigatório para a busca!" });
+    }
+
+    try {
+      const customers = await Customer.findAll({
+        where: {
+          nome: {
+            [Op.like]: `%${name}%`,
+          },
+        },
+      });
+
+      if (customers.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Nenhum cliente encontrado com esse nome." });
+      }
+
+      res.status(200).json(customers);
+    } catch (error) {
+      console.error("Erro ao buscar clientes: " + error);
+      res.status(500).json({ message: "Erro ao buscar clientes!" });
+    }
+  }
 };
