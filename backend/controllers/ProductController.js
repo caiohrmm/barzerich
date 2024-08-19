@@ -119,17 +119,19 @@ module.exports = class ProductController {
         }
       }
 
-      // Verificar se o produto já existe pelo nome
-      const productExists = await Product.findOne({
-        where: {
-          nome: name,
-        },
-      });
+      if (name) {
+        // Verificar se o produto já existe pelo nome
+        const productExists = await Product.findOne({
+          where: {
+            nome: name,
+          },
+        });
 
-      if (productExists) {
-        return res
-          .status(422)
-          .json({ message: "Produto já cadastrado no sistema!" });
+        if (productExists) {
+          return res
+            .status(422)
+            .json({ message: "Produto já cadastrado no sistema!" });
+        }
       }
 
       // Atualiza os campos do produto se fornecidos no corpo da solicitação
