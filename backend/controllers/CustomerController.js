@@ -1,9 +1,13 @@
 const { Op } = require("sequelize");
-const { Customer, Order } = require("../models/associations/associations");
-const PDFDocument = require("pdfkit");
+const {
+  Customer,
+  Order,
+  Product,
+} = require("../models/associations/associations");
+const ExcelJS = require("exceljs");
 const fs = require("fs");
 const path = require("path");
-const formatDate = require('../helpers/format-date')
+const formatDate = require("../helpers/format-date");
 
 module.exports = class CustomerController {
   static async addCustomer(req, res) {
@@ -188,11 +192,18 @@ module.exports = class CustomerController {
         fs.mkdirSync(reportsDir);
       }
 
-      // Buscar todos os clientes e incluir os pedidos associados
+      // Buscar todos os clientes e incluir os pedidos e produtos associados
       const customers = await Customer.findAll({
         include: {
           model: Order,
-          attributes: ["id"], // Selecionar apenas o ID dos pedidos
+          attributes: ["id"],
+          include: {
+            model: Product,
+            attributes: ["nome"],
+            through: {
+              attributes: ["quantidade", "preco"], // Inclua a quantidade e o preço da tabela intermediária
+            },
+          },
         },
       });
 
@@ -202,45 +213,65 @@ module.exports = class CustomerController {
           .json({ message: "Nenhum cliente encontrado para o relatório." });
       }
 
-      // Criar um novo documento PDF
-      const doc = new PDFDocument();
+      // Criar uma nova planilha Excel
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Relatório de Clientes");
 
-      // Definir o caminho e o nome do arquivo PDF
-      const filePath = path.join(reportsDir, "CustomerReport.pdf");
-      const writeStream = fs.createWriteStream(filePath);
+      // Adicionar título ao Excel
+      worksheet.mergeCells("A1", "D1");
+      worksheet.getCell("A1").value = "Relatório de Clientes";
+      worksheet.getCell("A1").font = { size: 20, bold: true };
+      worksheet.getCell("A1").alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
 
-      // Escrever o documento PDF no arquivo
-      doc.pipe(writeStream);
+      // Adicionar cabeçalhos de coluna
+      worksheet.addRow([
+        "Nome",
+        "Data de Cadastro",
+        "Total de Pedidos",
+        "Total Gasto",
+      ]);
 
-      // Adicionar título ao PDF
-      doc.fontSize(20).text("Relatório de Clientes", { align: "center" });
-      doc.fontSize(14).text(`Total de Clientes: ${customers.length}`, { align: "center" });
-      doc.moveDown(2);
-
-      // Adicionar cada cliente ao PDF
+      // Adicionar dados de cada cliente ao Excel
       customers.forEach((customer) => {
-        doc.fontSize(12).text(`Nome: ${customer.nome}`);
-        doc.text(`Data de Cadastro: ${formatDate(new Date(customer.data_criacao))}`);
-        doc.text(`Total de Pedidos: ${customer.Orders.length || 0}`);
-        doc.moveDown(1);
+        // Calcular o valor total gasto pelo cliente
+        let totalSpent = 0;
+        customer.Orders.forEach((order) => {
+          order.Products.forEach((product) => {
+            const quantidade = product.PedidoProdutos?.quantidade || 0;
+            const preco = product.PedidoProdutos?.preco || 0;
+            totalSpent += quantidade * preco;
+          });
+        });
+
+        // Adicionar uma linha para cada cliente
+        worksheet.addRow([
+          customer.nome,
+          formatDate(new Date(customer.data_criacao)),
+          customer.Orders.length || 0,
+          `R$ ${totalSpent.toFixed(2)}`,
+        ]);
       });
 
-      // Finalizar o documento
-      doc.end();
+      // Definir o caminho e o nome do arquivo Excel
+      const filePath = path.join(reportsDir, "CustomerReport.xlsx");
 
-      // Enviar o PDF como resposta após ser gerado
-      writeStream.on("finish", () => {
-        res.download(filePath, "CustomerReport.pdf", (err) => {
-          if (err) {
-            console.error("Erro ao enviar o PDF:", err);
-            return res
-              .status(500)
-              .json({ message: "Erro ao enviar o relatório." });
-          }
+      // Escrever o arquivo Excel
+      await workbook.xlsx.writeFile(filePath);
 
-          // Opcional: deletar o arquivo após enviar
-          fs.unlinkSync(filePath);
-        });
+      // Enviar o arquivo Excel como resposta
+      res.download(filePath, "CustomerReport.xlsx", (err) => {
+        if (err) {
+          console.error("Erro ao enviar o Excel:", err);
+          return res
+            .status(500)
+            .json({ message: "Erro ao enviar o relatório." });
+        }
+
+        // Opcional: deletar o arquivo após enviar
+        fs.unlinkSync(filePath);
       });
     } catch (error) {
       console.error("Erro ao gerar relatório de clientes:", error);
