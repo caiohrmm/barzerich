@@ -43,6 +43,19 @@ module.exports = class OrderController {
           .json({ message: "Um ou mais produtos são inválidos." });
       }
 
+      // Verificar se os produtos têm estoque suficiente
+      const outOfStockProducts = products.filter((p) => {
+        const product = foundProducts.find((fp) => fp.id === p.productId);
+        return product.estoque < p.amount;
+      });
+
+      // Se houver produtos sem estoque suficiente, retorne um erro
+      if (outOfStockProducts.length > 0) {
+        return res
+          .status(400)
+          .json({ message: "Um ou mais produtos não têm estoque suficiente." });
+      }
+
       // Calcular o total do pedido
       let total = 0;
       products.forEach((p) => {
@@ -72,6 +85,7 @@ module.exports = class OrderController {
             },
             { transaction }
           );
+          await product.save({ transaction });
         }
 
         // Confirmar a transação
@@ -156,18 +170,45 @@ module.exports = class OrderController {
     }
 
     try {
-      const order = await Order.findByPk(id);
+      const order = await Order.findByPk(id, {
+        include: {
+          model: Product,
+          through: {
+            model: OrderProducts, // Especificar explicitamente o modelo da tabela intermediária
+            attributes: ["quantidade"], // Incluir a quantidade da tabela intermediária
+          },
+        },
+      });
 
       if (!order) {
         return res.status(404).json({ message: "Pedido não encontrado." });
       }
 
+      if (order.status === "concluído") {
+        return res
+          .status(404)
+          .json({
+            message: "Não é possível alterar o status de um pedido concluído!",
+          });
+      }
+
+      // Atualizar o status do pedido
       order.status = status;
       await order.save();
 
-      res
-        .status(200)
-        .json({ message: "Status do pedido atualizado com sucesso.", order });
+      // Se o status for "concluído", atualizar o estoque dos produtos
+      if (status === "concluído") {
+        for (const product of order.Products) {
+          const quantidade = product.OrderProducts.quantidade;
+          product.estoque -= quantidade;
+          await product.save();
+        }
+      }
+
+      res.status(200).json({
+        message: "Status do pedido atualizado com sucesso.",
+        order,
+      });
     } catch (error) {
       console.error("Erro ao atualizar status do pedido: " + error);
       res.status(500).json({ message: "Erro ao atualizar status do pedido." });
