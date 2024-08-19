@@ -144,4 +144,33 @@ module.exports = class OrderController {
       res.status(500).json({ message: "Erro ao buscar pedido." });
     }
   }
+  static async updateOrderStatus(req, res) {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    // Validação: Verificar se o status foi fornecido
+    if (!status) {
+      return res
+        .status(422)
+        .json({ message: "O status do pedido é obrigatório." });
+    }
+
+    try {
+      const order = await Order.findByPk(id);
+
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado." });
+      }
+
+      order.status = status;
+      await order.save();
+
+      res
+        .status(200)
+        .json({ message: "Status do pedido atualizado com sucesso.", order });
+    } catch (error) {
+      console.error("Erro ao atualizar status do pedido: " + error);
+      res.status(500).json({ message: "Erro ao atualizar status do pedido." });
+    }
+  }
 };
