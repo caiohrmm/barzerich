@@ -173,4 +173,23 @@ module.exports = class OrderController {
       res.status(500).json({ message: "Erro ao atualizar status do pedido." });
     }
   }
+
+  static async deleteOrder(req, res) {
+    const { id } = req.params;
+
+    try {
+      const order = await Order.findByPk(id);
+
+      if (!order) {
+        return res.status(404).json({ message: "Pedido não encontrado." });
+      }
+
+      await order.destroy();
+
+      res.status(200).json({ message: "Pedido excluído com sucesso." });
+    } catch (error) {
+      console.error("Erro ao excluir pedido: " + error);
+      res.status(500).json({ message: "Erro ao excluir pedido." });
+    }
+  }
 };
