@@ -47,7 +47,7 @@ module.exports = class OrderController {
       let total = 0;
       products.forEach((p) => {
         const product = foundProducts.find((fp) => fp.id === p.productId);
-        total += product.preco_venda * p.quantidade;
+        total += product.preco_venda * p.amount;
       });
 
       // Criar a transação para garantir consistência
@@ -67,7 +67,7 @@ module.exports = class OrderController {
             {
               pedido_id: newOrder.id,
               produto_id: product.id,
-              quantidade: p.quantidade,
+              quantidade: p.amount,
               preco: product.preco_venda, // Salvar o preço do produto na criação do pedido
             },
             { transaction }
