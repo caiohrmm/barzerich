@@ -192,4 +192,42 @@ module.exports = class OrderController {
       res.status(500).json({ message: "Erro ao excluir pedido." });
     }
   }
+
+  static async getOrdersByCustomerId(req, res) {
+    const { customerId } = req.params;
+
+    try {
+      // Verificar se o cliente existe
+      const customer = await Customer.findByPk(customerId);
+      if (!customer) {
+        return res.status(404).json({ message: "Cliente não encontrado." });
+      }
+
+      // Buscar todos os pedidos associados a esse cliente
+      const orders = await Order.findAll({
+        where: { cliente_id: customerId },
+        include: [
+          {
+            model: Product,
+            through: {
+              attributes: ["quantidade", "preco"], // Informações da tabela intermediária
+            },
+            attributes: ["id", "nome", "preco_venda", "preco_custo"], // Atributos específicos do produto
+          },
+        ],
+      });
+
+      // Verificar se o cliente possui pedidos
+      if (orders.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Nenhum pedido encontrado para este cliente." });
+      }
+
+      res.status(200).json(orders);
+    } catch (error) {
+      console.error("Erro ao buscar pedidos do cliente: " + error);
+      res.status(500).json({ message: "Erro ao buscar pedidos do cliente." });
+    }
+  }
 };
