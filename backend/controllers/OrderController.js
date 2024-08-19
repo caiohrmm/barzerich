@@ -76,16 +76,33 @@ module.exports = class OrderController {
         // Criar as entradas na tabela intermediária OrderProducts
         for (const p of products) {
           const product = foundProducts.find((fp) => fp.id === p.productId);
-          await OrderProducts.create(
-            {
+
+          // Verificar se o produto já está na tabela intermediária
+          const existingOrderProduct = await OrderProducts.findOne({
+            where: {
               pedido_id: newOrder.id,
               produto_id: product.id,
-              quantidade: p.amount,
-              preco: product.preco_venda, // Salvar o preço do produto na criação do pedido
             },
-            { transaction }
-          );
-          await product.save({ transaction });
+            transaction,
+          });
+
+          if (existingOrderProduct) {
+            // Se a combinação já existir, atualize a quantidade
+            existingOrderProduct.quantidade += p.amount;
+            existingOrderProduct.preco = product.preco_venda;
+            await existingOrderProduct.save({ transaction });
+          } else {
+            // Se não existir, crie uma nova entrada
+            await OrderProducts.create(
+              {
+                pedido_id: newOrder.id,
+                produto_id: product.id,
+                quantidade: p.amount,
+                preco: product.preco_venda, // Salvar o preço do produto na criação do pedido
+              },
+              { transaction }
+            );
+          }
         }
 
         // Confirmar a transação
@@ -185,11 +202,9 @@ module.exports = class OrderController {
       }
 
       if (order.status === "concluído") {
-        return res
-          .status(404)
-          .json({
-            message: "Não é possível alterar o status de um pedido concluído!",
-          });
+        return res.status(404).json({
+          message: "Não é possível alterar o status de um pedido concluído!",
+        });
       }
 
       // Atualizar o status do pedido
