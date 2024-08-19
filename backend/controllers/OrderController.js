@@ -92,4 +92,56 @@ module.exports = class OrderController {
       res.status(500).json({ message: "Erro ao criar pedido." });
     }
   }
+
+  static async getAllOrders(req, res) {
+    try {
+      const orders = await Order.findAll({
+        include: [
+          {
+            model: Customer,
+            attributes: ["nome"], // Supondo que o nome do cliente seja armazenado como 'nome'
+          },
+          {
+            model: Product,
+            through: { attributes: ["quantidade", "preco"] }, // Informações da tabela intermediária
+          },
+        ],
+      });
+
+      res.status(200).json(orders);
+    } catch (error) {
+      console.error("Erro ao buscar pedidos: " + error);
+      res.status(500).json({ message: "Erro ao buscar pedidos." });
+    }
+  }
+
+  static async getOrderById(req, res) {
+    const { id } = req.params;
+
+    try {
+      const orderExists = await Order.findByPk(id);
+
+      if (!orderExists) {
+        return res.status(404).json({ message: "Pedido não encontrado." });
+      }
+
+      const order = await Order.findByPk(id, {
+        include: [
+          {
+            model: Customer,
+            attributes: ["nome"],
+          },
+          {
+            model: Product,
+            through: { attributes: ["quantidade", "preco"] },
+          },
+        ],
+      });
+
+      res.status(200).json(order);
+    } catch (error) {
+      console.error("Erro ao buscar pedido: " + error);
+      res.status(500).json({ message: "Erro ao buscar pedido." });
+    }
+  }
 };
