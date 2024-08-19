@@ -192,18 +192,11 @@ module.exports = class CustomerController {
         fs.mkdirSync(reportsDir);
       }
 
-      // Buscar todos os clientes e incluir os pedidos e produtos associados
+      // Buscar todos os clientes e incluir os pedidos associados
       const customers = await Customer.findAll({
         include: {
           model: Order,
-          attributes: ["id"],
-          include: {
-            model: Product,
-            attributes: ["nome"],
-            through: {
-              attributes: ["quantidade", "preco"], // Inclua a quantidade e o preço da tabela intermediária
-            },
-          },
+          attributes: ["id", "total"], // Inclua o total de cada pedido
         },
       });
 
@@ -237,14 +230,10 @@ module.exports = class CustomerController {
       // Adicionar dados de cada cliente ao Excel
       customers.forEach((customer) => {
         // Calcular o valor total gasto pelo cliente
-        let totalSpent = 0;
-        customer.Orders.forEach((order) => {
-          order.Products.forEach((product) => {
-            const quantidade = product.PedidoProdutos?.quantidade || 0;
-            const preco = product.PedidoProdutos?.preco || 0;
-            totalSpent += quantidade * preco;
-          });
-        });
+        const totalSpent = customer.Orders.reduce(
+          (acc, order) => acc + order.total,
+          0
+        );
 
         // Adicionar uma linha para cada cliente
         worksheet.addRow([
