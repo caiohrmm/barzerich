@@ -1,5 +1,9 @@
 const { Op } = require("sequelize");
 const { Customer, Order } = require("../models/associations/associations");
+const PDFDocument = require("pdfkit");
+const fs = require("fs");
+const path = require("path");
+const formatDate = require('../helpers/format-date')
 
 module.exports = class CustomerController {
   static async addCustomer(req, res) {
@@ -173,6 +177,74 @@ module.exports = class CustomerController {
     } catch (error) {
       console.error("Erro ao buscar clientes: " + error);
       res.status(500).json({ message: "Erro ao buscar clientes!" });
+    }
+  }
+
+  static async generateCustomerReport(req, res) {
+    try {
+      // Verificar se o diretório 'reports' existe, se não, criar
+      const reportsDir = path.join(__dirname, "..", "reports");
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir);
+      }
+
+      // Buscar todos os clientes e incluir os pedidos associados
+      const customers = await Customer.findAll({
+        include: {
+          model: Order,
+          attributes: ["id"], // Selecionar apenas o ID dos pedidos
+        },
+      });
+
+      if (!customers || customers.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Nenhum cliente encontrado para o relatório." });
+      }
+
+      // Criar um novo documento PDF
+      const doc = new PDFDocument();
+
+      // Definir o caminho e o nome do arquivo PDF
+      const filePath = path.join(reportsDir, "CustomerReport.pdf");
+      const writeStream = fs.createWriteStream(filePath);
+
+      // Escrever o documento PDF no arquivo
+      doc.pipe(writeStream);
+
+      // Adicionar título ao PDF
+      doc.fontSize(20).text("Relatório de Clientes", { align: "center" });
+      doc.fontSize(14).text(`Total de Clientes: ${customers.length}`, { align: "center" });
+      doc.moveDown(2);
+
+      // Adicionar cada cliente ao PDF
+      customers.forEach((customer) => {
+        doc.fontSize(12).text(`Nome: ${customer.nome}`);
+        doc.text(`Data de Cadastro: ${formatDate(new Date(customer.data_criacao))}`);
+        doc.text(`Total de Pedidos: ${customer.Orders.length || 0}`);
+        doc.moveDown(1);
+      });
+
+      // Finalizar o documento
+      doc.end();
+
+      // Enviar o PDF como resposta após ser gerado
+      writeStream.on("finish", () => {
+        res.download(filePath, "CustomerReport.pdf", (err) => {
+          if (err) {
+            console.error("Erro ao enviar o PDF:", err);
+            return res
+              .status(500)
+              .json({ message: "Erro ao enviar o relatório." });
+          }
+
+          // Opcional: deletar o arquivo após enviar
+          fs.unlinkSync(filePath);
+        });
+      });
+    } catch (error) {
+      console.error("Erro ao gerar relatório de clientes:", error);
+      res.status(500).json({ message: "Erro ao gerar relatório de clientes." });
     }
   }
 };
