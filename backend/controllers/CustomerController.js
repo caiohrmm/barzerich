@@ -221,6 +221,7 @@ module.exports = class CustomerController {
 
       // Adicionar cabeçalhos de coluna
       worksheet.addRow([
+        "ID",
         "Nome",
         "Data de Cadastro",
         "Total de Pedidos",
@@ -237,6 +238,7 @@ module.exports = class CustomerController {
 
         // Adicionar uma linha para cada cliente
         worksheet.addRow([
+          customer.id,
           customer.nome,
           formatDate(new Date(customer.data_criacao)),
           customer.Orders.length || 0,
