@@ -76,33 +76,19 @@ module.exports = class OrderController {
         // Criar as entradas na tabela intermediária OrderProducts
         for (const p of products) {
           const product = foundProducts.find((fp) => fp.id === p.productId);
-
-          // Verificar se o produto já está na tabela intermediária
-          const existingOrderProduct = await OrderProducts.findOne({
-            where: {
+          await OrderProducts.create(
+            {
               pedido_id: newOrder.id,
               produto_id: product.id,
+              quantidade: p.amount,
+              preco: product.preco_venda, // Salvar o preço do produto na criação do pedido
             },
-            transaction,
-          });
+            { transaction }
+          );
 
-          if (existingOrderProduct) {
-            // Se a combinação já existir, atualize a quantidade
-            existingOrderProduct.quantidade += p.amount;
-            existingOrderProduct.preco = product.preco_venda;
-            await existingOrderProduct.save({ transaction });
-          } else {
-            // Se não existir, crie uma nova entrada
-            await OrderProducts.create(
-              {
-                pedido_id: newOrder.id,
-                produto_id: product.id,
-                quantidade: p.amount,
-                preco: product.preco_venda, // Salvar o preço do produto na criação do pedido
-              },
-              { transaction }
-            );
-          }
+          // Reduzir o estoque imediatamente
+          product.estoque -= p.amount;
+          await product.save({ transaction });
         }
 
         // Confirmar a transação
@@ -207,15 +193,21 @@ module.exports = class OrderController {
         });
       }
 
+      if (order.status === "cancelado") {
+        return res.status(404).json({
+          message: "Não é possível alterar o status de um pedido cancelado!",
+        });
+      }
+
       // Atualizar o status do pedido
       order.status = status;
       await order.save();
 
       // Se o status for "concluído", atualizar o estoque dos produtos
-      if (status === "concluído") {
+      if (status === "cancelado") {
         for (const product of order.Products) {
           const quantidade = product.OrderProducts.quantidade;
-          product.estoque -= quantidade;
+          product.estoque += quantidade;
           await product.save();
         }
       }

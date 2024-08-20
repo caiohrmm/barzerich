@@ -196,7 +196,7 @@ module.exports = class CustomerController {
       const customers = await Customer.findAll({
         include: {
           model: Order,
-          attributes: ["id", "total"], // Inclua o total de cada pedido
+          attributes: ["id", "total", "status"], // Inclua o status de cada pedido
         },
       });
 
@@ -230,8 +230,13 @@ module.exports = class CustomerController {
 
       // Adicionar dados de cada cliente ao Excel
       customers.forEach((customer) => {
-        // Calcular o valor total gasto pelo cliente
-        const totalSpent = customer.Orders.reduce(
+        // Filtrar os pedidos para excluir os cancelados
+        const validOrders = customer.Orders.filter(
+          (order) => order.status !== "cancelado"
+        );
+
+        // Calcular o valor total gasto pelo cliente, excluindo pedidos cancelados
+        const totalSpent = validOrders.reduce(
           (acc, order) => acc + order.total,
           0
         );
@@ -241,7 +246,7 @@ module.exports = class CustomerController {
           customer.id,
           customer.nome,
           formatDate(new Date(customer.data_criacao)),
-          customer.Orders.length || 0,
+          validOrders.length || 0,
           `R$ ${totalSpent.toFixed(2)}`,
         ]);
       });
