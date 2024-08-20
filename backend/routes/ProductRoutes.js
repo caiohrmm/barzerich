@@ -13,7 +13,18 @@ router.get("/", checkUser, ProductController.getAllProducts);
 router.get("/:id", checkUser, ProductController.getProductById);
 
 // Buscar produtos por nome
-router.get("/findbyname/search", checkUser, ProductController.findProductsByName);
+router.get(
+  "/findbyname/search",
+  checkUser,
+  ProductController.findProductsByName
+);
+
+// Buscar produtos por nome
+router.get(
+  "/report/generate",
+  checkUser,
+  ProductController.generateProductReport
+);
 
 // Atualizar um produto
 router.patch("/:id", checkUser, ProductController.updateProduct);
@@ -22,8 +33,10 @@ router.patch("/:id", checkUser, ProductController.updateProduct);
 router.delete("/:id", checkUser, ProductController.deleteProduct);
 
 // Buscar produtos por categoria
-router.get("/category/:categoryId", checkUser, ProductController.getProductsByCategory);
-
-
+router.get(
+  "/category/:categoryId",
+  checkUser,
+  ProductController.getProductsByCategory
+);
 
 module.exports = router;

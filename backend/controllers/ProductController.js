@@ -1,6 +1,10 @@
 const { Op } = require("sequelize");
 const checkProductExists = require("../helpers/check-product-exists");
 const { Product, Category } = require("../models/associations/associations");
+const formatDate = require("../helpers/format-date");
+const ExcelJS = require("exceljs");
+const path = require("path");
+const fs = require("fs");
 
 module.exports = class ProductController {
   static async addProduct(req, res) {
@@ -233,6 +237,113 @@ module.exports = class ProductController {
     } catch (error) {
       console.error("Erro ao buscar produtos por nome:", error);
       res.status(500).json({ message: "Erro ao buscar produtos." });
+    }
+  }
+
+  static async generateProductReport(req, res) {
+    try {
+      // Verificar se o diretório 'reports' existe, se não, criar
+      const reportsDir = path.join(__dirname, "..", "reports");
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir);
+      }
+
+      // Buscar todas as categorias e seus produtos
+      const categories = await Category.findAll({
+        include: {
+          model: Product,
+          attributes: [
+            "id",
+            "nome",
+            "preco_custo",
+            "preco_venda",
+            "estoque",
+            "data_criacao",
+          ],
+        },
+      });
+
+      if (!categories || categories.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Nenhuma categoria encontrada para o relatório." });
+      }
+
+      // Criar uma nova planilha Excel
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Relatório de Produtos");
+
+      // Adicionar título ao Excel
+      worksheet.mergeCells("A1", "F1");
+      worksheet.getCell("A1").value = "Relatório de Produtos";
+      worksheet.getCell("A1").font = { size: 20, bold: true };
+      worksheet.getCell("A1").alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+
+      // Adicionar cabeçalhos de coluna
+      worksheet.addRow([
+        "ID",
+        "Nome",
+        "Preço de Custo",
+        "Preço de Venda",
+        "Estoque",
+        "Data de Criação",
+      ]);
+
+      // Adicionar dados de cada categoria e seus produtos ao Excel
+      categories.forEach((category) => {
+        // Adicionar o nome da categoria com estilização
+        const categoryCell = worksheet.addRow([
+          `Nome da Categoria: ${category.nome}`,
+        ]);
+        categoryCell.font = {
+          size: 14,
+          bold: true,
+          color: { argb: "FF0000FF" },
+        }; // Negrito e cor azul
+        categoryCell.alignment = { horizontal: "left" };
+
+        worksheet.addRow([]); // Espaço entre categorias
+
+        category.Products.forEach((product) => {
+          worksheet.addRow([
+            product.id,
+            product.nome,
+            `R$ ${product.preco_custo.toFixed(2)}`,
+            `R$ ${product.preco_venda.toFixed(2)}`,
+            product.estoque,
+            formatDate(new Date(product.data_criacao)),
+          ]);
+        });
+
+        // Espaço entre categorias
+        worksheet.addRow([]);
+        worksheet.addRow([]);
+      });
+
+      // Definir o caminho e o nome do arquivo Excel
+      const filePath = path.join(reportsDir, "ProductReport.xlsx");
+
+      // Escrever o arquivo Excel
+      await workbook.xlsx.writeFile(filePath);
+
+      // Enviar o arquivo Excel como resposta
+      res.download(filePath, "ProductReport.xlsx", (err) => {
+        if (err) {
+          console.error("Erro ao enviar o Excel:", err);
+          return res
+            .status(500)
+            .json({ message: "Erro ao enviar o relatório." });
+        }
+
+        // Opcional: deletar o arquivo após enviar
+        fs.unlinkSync(filePath);
+      });
+    } catch (error) {
+      console.error("Erro ao gerar relatório de produtos:", error);
+      res.status(500).json({ message: "Erro ao gerar relatório de produtos." });
     }
   }
 };
