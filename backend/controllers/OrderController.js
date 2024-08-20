@@ -1,4 +1,9 @@
 const sequelize = require("../database/connection");
+const path = require("path");
+const ExcelJS = require("exceljs");
+const fs = require("fs");
+const { Op } = require("sequelize");
+const formatDate = require("../helpers/format-date");
 const {
   Product,
   Order,
@@ -276,6 +281,151 @@ module.exports = class OrderController {
     } catch (error) {
       console.error("Erro ao buscar pedidos do cliente: " + error);
       res.status(500).json({ message: "Erro ao buscar pedidos do cliente." });
+    }
+  }
+
+  static async generateOrderReport(req, res) {
+    const { startDate, endDate } = req.query;
+
+    // Validar as datas
+    if (!startDate || !endDate) {
+      return res
+        .status(422)
+        .json({ message: "As datas de início e fim são obrigatórias." });
+    }
+
+    try {
+      // Verificar se o diretório 'reports' existe, se não, criar
+      const reportsDir = path.join(__dirname, "..", "reports");
+      if (!fs.existsSync(reportsDir)) {
+        fs.mkdirSync(reportsDir);
+      }
+
+      // Buscar os pedidos dentro do período especificado e com status 'concluído'
+      const orders = await Order.findAll({
+        where: {
+          data_pedido: {
+            [Op.between]: [new Date(startDate), new Date(endDate)],
+          },
+          status: "concluído", // Apenas pedidos com status 'concluído'
+        },
+        include: [
+          {
+            model: Customer,
+            attributes: ["id", "nome"],
+          },
+          {
+            model: Product,
+            attributes: ["id", "preco_custo", "preco_venda", "nome"], // Adicionei o atributo 'nome'
+            through: {
+              attributes: ["quantidade", "preco"], // Atributos da tabela intermediária OrderProducts
+            },
+          },
+        ],
+      });
+
+      if (!orders || orders.length === 0) {
+        return res
+          .status(404)
+          .json({ message: "Nenhum pedido encontrado para o relatório." });
+      }
+
+      // Criar uma nova planilha Excel
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("Relatório de Pedidos");
+
+      // Adicionar título ao Excel
+      worksheet.mergeCells("A1", "F1");
+      worksheet.getCell("A1").value = "Relatório de Pedidos";
+      worksheet.getCell("A1").font = { size: 20, bold: true };
+      worksheet.getCell("A1").alignment = {
+        vertical: "middle",
+        horizontal: "center",
+      };
+
+      // Adicionar cabeçalhos de coluna
+      worksheet.addRow([
+        "ID do Pedido",
+        "Data do Pedido",
+        "ID do Cliente",
+        "Nome do Cliente",
+        "Produtos",
+        "Preço de Custo Total",
+        "Preço de Venda Total",
+        "Lucro",
+      ]);
+
+      // Adicionar dados de cada pedido ao Excel
+      orders.forEach((order) => {
+        // Agrupar produtos por ID
+        const productDetails = order.Products.reduce((acc, productOrder) => {
+          const { id, preco_custo, preco_venda, nome } = productOrder;
+          const quantidade = productOrder.OrderProducts.quantidade;
+
+          // Concatenar nome e quantidade dos produtos
+          if (!acc[id]) {
+            acc[id] = {
+              nome,
+              quantidade: 0,
+              preco_custo,
+              preco_venda,
+            };
+          }
+          acc[id].quantidade += quantidade;
+
+          return acc;
+        }, {});
+
+        // Calcular o total de preço de custo e preço de venda
+        let totalCost = 0;
+        let totalSale = 0;
+        let productsDescription = "";
+
+        Object.values(productDetails).forEach((detail) => {
+          const { nome, quantidade, preco_custo, preco_venda } = detail;
+          totalCost += preco_custo * quantidade;
+          totalSale += preco_venda * quantidade;
+          productsDescription += `${nome} ${quantidade}x - `;
+        });
+
+        // Remover o último " - "
+        productsDescription = productsDescription.slice(0, -3);
+
+        const lucro = totalSale - totalCost;
+
+        worksheet.addRow([
+          order.id,
+          formatDate(new Date(order.data_pedido)),
+          order.Customer.id,
+          order.Customer.nome,
+          productsDescription,
+          `R$ ${totalCost.toFixed(2)}`,
+          `R$ ${totalSale.toFixed(2)}`,
+          `R$ ${lucro.toFixed(2)}`,
+        ]);
+      });
+
+      // Definir o caminho e o nome do arquivo Excel
+      const filePath = path.join(reportsDir, "OrderReport.xlsx");
+
+      // Escrever o arquivo Excel
+      await workbook.xlsx.writeFile(filePath);
+
+      // Enviar o arquivo Excel como resposta
+      res.download(filePath, "OrderReport.xlsx", (err) => {
+        if (err) {
+          console.error("Erro ao enviar o Excel:", err);
+          return res
+            .status(500)
+            .json({ message: "Erro ao enviar o relatório." });
+        }
+
+        // Opcional: deletar o arquivo após enviar
+        fs.unlinkSync(filePath);
+      });
+    } catch (error) {
+      console.error("Erro ao gerar relatório de pedidos:", error);
+      res.status(500).json({ message: "Erro ao gerar relatório de pedidos." });
     }
   }
 };
